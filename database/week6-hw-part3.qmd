@@ -1,0 +1,70 @@
+---
+title: "Week 6 HW Part 3"
+format: html
+warning: false
+messages: false
+editor_options: 
+  chunk_output_type: console
+---
+
+# Who were the winners?
+
+At the conclusion of the ASDN project the PIs decided to hand out first, second, and third prizes to the observers who measured the most eggs. Who won?
+
+## Setup
+
+```{r}
+library(tidyverse)
+library(DBI)
+library(duckdb)
+library(dplyr)
+```
+
+## Connect to database
+
+```{r}
+conn <- DBI::dbConnect(duckdb::duckdb(), dbdir='database.db')
+```
+
+## Load tables
+
+To have observer full name and the number of eggs they measured, we need the Personnel table, the Bird_egg table for egg measurement, and the Bird_nests table to connect the two.
+
+**Note:** Bird_nests has a column, Clutch_max, that contains the maximum number of eggs recorded for each nest. To me, that is unclear if the observer actually measured each egg in the nest. But, I know for sure that each egg in the Bird_egg table was measured, so I will use counts from that table to answer this question.
+
+```{r}
+# Personnel table
+personnel <- tbl(conn, "Personnel")
+
+# Nests table
+nests <- tbl(conn, "Bird_nests")
+
+# Eggs table
+eggs <- tbl(conn, "Bird_eggs")
+```
+
+## Query
+
+```{r}
+egg_nest <- left_join(eggs, nests, by = "Nest_ID")
+
+all <- left_join(egg_nest, personnel, by = join_by(Observer == Abbreviation)) |>
+    group_by(Name) |>
+    summarise(total_eggs = n()) |>
+    ungroup() |>
+    arrange(desc(total_eggs)) |>
+    head(3) |>
+    show_query()
+
+print(all)
+```
+
+## Discussion
+
+I did use multiple R statements to get the answer. dbplyr did not create a temp table, but instead made a nested query. 
+
+It limited the first 3 rows using a SQL LIMIT clause. 
+
+
+
+

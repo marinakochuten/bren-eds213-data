@@ -1,0 +1,114 @@
+---
+title: "connecting to duckdb"
+format: html
+---
+
+```{r}
+library(tidyverse)
+library(DBI)
+library(duckdb)
+```
+
+Let's connect our database
+
+```{r}
+conn <- DBI::dbConnect(duckdb::duckdb(), dbdir='database.db')
+```
+
+Let's look at our tables
+
+```{r}
+# List all tables
+DBI::dbListTables(conn)
+```
+
+Look at an entire table
+
+```{r}
+species <- tbl(conn, "Species")
+species
+```
+
+First query
+```{r}
+species_a <- dbGetQuery(conn, "SELECT * FROM Species WHERE Code LIKE '%a'")
+species_a
+```
+
+There is a better way
+```{r}
+library(dplyr)
+```
+
+```{r}
+species |>
+    filter(Relevance == "Study species") |>
+    select(Code, Scientific_name) |>
+    show_query()
+```
+```{r}
+species_study <- species |>
+    filter(Relevance == "Study species") |>
+    select(Code, Scientific_name)
+```
+
+```{r}
+class(species_study)
+```
+
+we can summarize
+
+```{r}
+species |>
+    group_by(Relevance)|>
+    summarise(num_species = n())
+```
+
+We can mutate too
+```{r}
+species |>
+    mutate(Code_x = paste0("X", Code)) |>
+    show_query()
+```
+
+How do we get the full data?
+
+```{r}
+species |>
+    mutate(Code_x = paste0("X", Code)) |>
+    collect()
+```
+
+Can i group?
+```{r}
+species |>
+    group_by(Relevance) |>
+    summarise(num_species = n()) |>
+    show_query()
+```
+
+You can do joins
+```{r}
+# load a few more tables
+eggs_db <- tbl(conn, "Bird_eggs")
+nests_db <- tbl(conn, "Bird_nests")
+```
+
+```{r}
+left_join(nests_db, eggs_db, by = "Nest_ID", keep = FALSE) |>
+    collect()
+```
+
+Don't forget to close the database connection!
+
+```{r}
+DBI::dbDisconnect(conn, shutdown = TRUE)
+```
+
+
+
+
+
+
+
+
